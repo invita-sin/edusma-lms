@@ -1,0 +1,75 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edusma-app
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      APP_ENV: production
+      APP_DEBUG: false
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: edusma_lms
+      DB_USERNAME: edusma
+      DB_PASSWORD: "${DB_PASSWORD}"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - storage_data:/var/www/storage
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edusma-queue
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=3 --tries=3
+    environment:
+      APP_ENV: production
+      DB_HOST: db
+      DB_PASSWORD: "${DB_PASSWORD}"
+      REDIS_HOST: redis
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - storage_data:/var/www/storage
+
+  db:
+    image: mysql:8.0
+    container_name: edusma-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: edusma_lms
+      MYSQL_USER: edusma
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: edusma-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:
+  storage_data:

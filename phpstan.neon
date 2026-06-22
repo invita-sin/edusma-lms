@@ -1,0 +1,10 @@
+parameters:
+    level: max
+    paths:
+        - app/
+        - config/
+        - database/
+    ignoreErrors:
+        - '/Unsafe usage of new static/'
+    excludePaths:
+        - database/migrations/
